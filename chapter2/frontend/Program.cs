@@ -1,5 +1,6 @@
 using frontend;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using System.Diagnostics;
 
@@ -13,6 +14,15 @@ var storageEndpoint = storageConfig?.GetValue<string>("Endpoint") ?? "http://loc
 builder.Services.AddHttpClient("storage", httpClient =>
 {
     httpClient.BaseAddress = new Uri(storageEndpoint);
+});
+
+builder.Services.AddOpenTelemetry().WithTracing(b =>
+{
+    b.SetResourceBuilder(
+        ResourceBuilder.CreateDefault().AddService(
+            builder.Environment.ApplicationName))
+    .AddAspNetCoreInstrumentation()
+    .AddOtlpExporter(o => { o.Endpoint = new Uri("http://localhost:4317"); });
 });
 
 builder.Services.AddSingleton<StorageService>();
