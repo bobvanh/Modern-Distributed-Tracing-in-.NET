@@ -16,15 +16,6 @@ builder.Services.AddHttpClient("storage", httpClient =>
     httpClient.BaseAddress = new Uri(storageEndpoint);
 });
 
-builder.Services.AddOpenTelemetry().WithTracing(b =>
-{
-    b.SetResourceBuilder(
-        ResourceBuilder.CreateDefault().AddService(
-            builder.Environment.ApplicationName))
-    .AddAspNetCoreInstrumentation()
-    .AddOtlpExporter(o => { o.Endpoint = new Uri("http://localhost:4317"); });
-});
-
 builder.Services.AddSingleton<StorageService>();
 
 ConfigureTelemetry(builder);
@@ -58,10 +49,14 @@ app.Run();
 static void ConfigureTelemetry(WebApplicationBuilder builder)
 {
     builder.Services.AddOpenTelemetry()
-        .WithTracing(tracerProviderBuilder => tracerProviderBuilder
-            .AddJaegerExporter()
-            .AddHttpClientInstrumentation()
-            .AddAspNetCoreInstrumentation())
+        .WithTracing(b =>
+        {
+            b.SetResourceBuilder(
+                ResourceBuilder.CreateDefault().AddService(
+                    builder.Environment.ApplicationName))
+            .AddAspNetCoreInstrumentation()
+            .AddOtlpExporter(o => { o.Endpoint = new Uri("http://localhost:4317"); });
+        })
         .WithMetrics(meterProviderBuilder => meterProviderBuilder
             .AddPrometheusExporter()
             .AddHttpClientInstrumentation()

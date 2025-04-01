@@ -2,6 +2,7 @@ using storage;
 using Microsoft.EntityFrameworkCore;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,11 +46,14 @@ app.Run();
 static void ConfigureTelemetry(WebApplicationBuilder builder)
 {
     builder.Services.AddOpenTelemetry()
-        .WithTracing(tracerProviderBuilder => tracerProviderBuilder
-            .AddJaegerExporter()
-            .AddHttpClientInstrumentation()
+        .WithTracing(b =>
+        {
+            b.SetResourceBuilder(
+                ResourceBuilder.CreateDefault().AddService(
+                    builder.Environment.ApplicationName))
             .AddAspNetCoreInstrumentation()
-            .AddEntityFrameworkCoreInstrumentation())
+            .AddOtlpExporter(o => { o.Endpoint = new Uri("http://localhost:4317"); });
+        })
         .WithMetrics(meterProviderBuilder => meterProviderBuilder
             .AddPrometheusExporter()
             .AddHttpClientInstrumentation()
